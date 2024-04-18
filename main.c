@@ -4,6 +4,7 @@
 void print_help() {
 	printf("command line options:\n");
 	printf("\t'--quiet'               : disables printing inbetween operations\n");
+	printf("\t'--step'                : steps through the program [press enter]\n");
 	printf("\t\n");
 	printf("\t'--verbose-parser'     : prints opcodes and parameters of the awatalk\n");
 	printf("\t'--verbose-interpreter' : prints current instruction and stack while executing\n");
@@ -14,9 +15,9 @@ void print_help() {
 	printf("\t'-string'               : the next provided argument will be awatalk to be parsed\n");
 	printf("\t'-file'                 : the next provided argument will be awatalk file to be parsed\n");
 	printf("example usage:\n");
-	printf("\t'awaparser -verbose -string 'awa awa awawa awawa awa awa awa awa awa awawa awa awa awawa awawa awa awa awa awa awa awawawa awa awawa awawa awa awa awa awa awa awawa awa awawa awa awawa awa awa awawawa awa awa awa awawa'\n");
-	printf("\t'awaparser --quiet -file hello_world.awa\n");
-	printf("\t'awaparser --verbose-parser -file hello_world.awa\n");
+	printf("\tawaparser --verbose -string 'awa awa awawa awawa awa awa awa awa awa awawa awa awa awawa awawa awa awa awa awa awa awawawa awa awawa awawa awa awa awa awa awa awawa awa awawa awa awawa awa awa awawawa awa awa awa awawa'\n");
+	printf("\tawaparser --quiet -file hello_world.awa\n");
+	printf("\tawaparser --verbose-parser -file hello_world.awa\n");
 }
 
 int main(int argc, char** argv)
@@ -24,6 +25,7 @@ int main(int argc, char** argv)
 	bool verbose_parser = false;
 	bool verbose_interpreter = false;
 	bool quiet = false;
+	bool step_through = false;
 	char* file = NULL;
 	char* string = NULL;
 	bool file_next = false;
@@ -55,6 +57,8 @@ int main(int argc, char** argv)
 			verbose_parser = true;
 		else if (strcmp(argv[i], "--verbose-interpreter") == 0)
 			verbose_interpreter = true;
+		else if (strcmp(argv[i], "--step") == 0)
+			step_through = true;
 		else if (strcmp(argv[i], "-file") == 0)
 			file_next = true;
 		else if (strcmp(argv[i], "-string") == 0)
@@ -96,7 +100,7 @@ int main(int argc, char** argv)
 	}
 	if (!quiet) puts("parsed file succesfully");
 	if (!quiet) puts("running program:\n-");
-	awa_program_run(prog, verbose_interpreter);
+	awa_program_run(prog, verbose_interpreter, step_through);
 	if (!quiet) puts("\n-\nprogram done!");
 	awa_program_free(&prog);
 }

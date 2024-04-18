@@ -15,6 +15,7 @@ static void awa_recursive_bubble_free(awa_bubble_t* bubble) {
 #define bubble_pop(prog) do {						\
 		awa_bubble_t* tmp = (prog)->bubble_first;	\
 		llist_stack_pop((prog)->bubble_first);		\
+		tmp->next = NULL;							\
 		awa_recursive_bubble_free(tmp);				\
 	} while (0);
 
@@ -25,7 +26,8 @@ static void awa_recursive_print_bubble(awa_bubble_t* bubble) {
 			awa_recursive_print_bubble(b);
 		}
 	} else {
-		putchar(awascii_table[bubble->val & 63]);
+		if (bubble->val <= 63)
+			putchar(awascii_table[bubble->val]);
 	}
 }
 static void awa_recursive_print_num_bubble(awa_bubble_t* bubble, bool first) {
@@ -54,20 +56,27 @@ enum awa_arithmetic_op {
 	AWA_ARITH_MUL,
 	AWA_ARITH_DIV,
 };
-static int awa_bubble_arithmetic_val(awa_bubble_t* a, awa_bubble_t* b, enum awa_arithmetic_op op) {
+static void awa_bubble_arithmetic_val(awa_bubble_t* new, awa_bubble_t* a, awa_bubble_t* b, enum awa_arithmetic_op op) {
 	switch(op) {
-	case AWA_ARITH_ADD: return a->val + b->val;
-	case AWA_ARITH_SUB: return a->val - b->val;
-	case AWA_ARITH_MUL: return a->val * b->val;
-	case AWA_ARITH_DIV: return a->val / b->val;
+	case AWA_ARITH_ADD: new->val = a->val + b->val; break;
+	case AWA_ARITH_SUB: new->val = a->val - b->val; break;
+	case AWA_ARITH_MUL: new->val = a->val * b->val; break;
+	case AWA_ARITH_DIV: {
+		awa_bubble_t* res = calloc(sizeof(*res), 1);
+		res->val = a->val / b->val;
+		awa_bubble_t* rem = calloc(sizeof(*rem), 1);
+		rem->val = a->val % b->val;
+		llist_queue_push(new->first, new->last, res);
+		llist_queue_push(new->first, new->last, rem);
+		break;
 	}
-	return 0;
+	}
 }
 
 static awa_bubble_t* awa_recursive_bubble_arithmetic(awa_bubble_t* a, awa_bubble_t* b, enum awa_arithmetic_op op) {
 	awa_bubble_t* new = calloc(sizeof(*new), 1);
 	if (!a->first && !b->first) {
-		new->val = awa_bubble_arithmetic_val(a, b, op);
+		awa_bubble_arithmetic_val(new, a, b, op);
 	} else if (a->first && !b->first) {
 		for (awa_bubble_t* a_inside = a->first; a_inside; a_inside = a_inside->next) {
 			awa_bubble_t* new_inside = awa_recursive_bubble_arithmetic(a_inside, b, op);
@@ -148,7 +157,7 @@ static void awa_bubble_cmp(awa_program_t* program, enum awa_cmp_op op) {
 	}
 }
 
-static void awa_program_run(awa_program_t program, bool print_debug) {
+static void awa_program_run(awa_program_t program, bool print_debug, bool step_through) {
 	for (awatism_t* current_awatism = program.awatism_first; current_awatism; current_awatism = current_awatism->next) {
 	rerun_current_awatism:;
 		if (print_debug) {
@@ -161,8 +170,12 @@ static void awa_program_run(awa_program_t program, bool print_debug) {
 			printf(")");
 			printf(" | ");
 			awa_print_awatism(*current_awatism);
+			if (program.cmp_skip_next_flag)
+			printf(" | SKIPPING");
 			printf(">>>\n");
 		}
+		if (step_through)
+			getchar();
 
 		if (program.cmp_skip_next_flag) {
 			program.cmp_skip_next_flag = false;
@@ -173,28 +186,36 @@ static void awa_program_run(awa_program_t program, bool print_debug) {
 			// nothing
 		} break;
 		case AWA_PRINT: {
-			awa_recursive_print_bubble(program.bubble_first);
-			program.last_print_was_number_flag = false;
-			bubble_pop(&program);
+			if (program.bubble_first) {
+				awa_recursive_print_bubble(program.bubble_first);
+				program.last_print_was_number_flag = false;
+				bubble_pop(&program);
+			}
 		} break;
 		case AWA_PRINT_NUM: {
-			awa_recursive_print_num_bubble(program.bubble_first, !program.last_print_was_number_flag);
-			program.last_print_was_number_flag = true;
-			bubble_pop(&program);
+			if (program.bubble_first) {
+				awa_recursive_print_num_bubble(program.bubble_first, !program.last_print_was_number_flag);
+				program.last_print_was_number_flag = true;
+				bubble_pop(&program);
+			}
 		} break;
 		case AWA_READ: {
 			printf(">>>AWA INTERPRETER IS REQUESTING INPUT(text): ");
 			char buf[1024] = {0};
 			fgets(buf, sizeof(buf), stdin);
-			for (int i = 0; buf[i]; i++) {
+			int i = 0;
+			awa_bubble_t* new = calloc(sizeof(*new), 1);
+			for (; buf[i] && buf[i] != '\n'; i++) {
 				uint8_t c = awascii_table_inverse[(uint8_t)buf[i]];
 				if (c && buf[i] != 'A') {
 					awa_bubble_t* b = calloc(sizeof(*b), 1);
 					b->val = c;
-					llist_stack_push(program.bubble_first, b);
+					llist_queue_push(new->first, new->last, b);
 				}
 			}
-			printf(">>>AWA INTERPRETER IS READ INPUT [%s]\n", buf);
+			if (new->first) llist_stack_push(program.bubble_first, new);
+			else            free(new);
+			printf(">>>AWA INTERPRETER READ INPUT [%.*s]\n", i, buf);
 		} break;
 		case AWA_READ_NUM: {
 			printf(">>>AWA INTERPRETER IS REQUESTING INPUT(numb): ");
@@ -203,7 +224,7 @@ static void awa_program_run(awa_program_t program, bool print_debug) {
 			awa_bubble_t* b = calloc(sizeof(*b), 1);
 			sscanf(buf, "%d", &b->val);
 			llist_stack_push(program.bubble_first, b);
-			printf(">>>AWA INTERPRETER IS READ INPUT [%d]\n", b->val);
+			printf(">>>AWA INTERPRETER READ INPUT [%d]\n", b->val);
 		} break;
 		case AWA_TERMINATE: {
 			goto program_end;
@@ -214,14 +235,14 @@ static void awa_program_run(awa_program_t program, bool print_debug) {
 			llist_stack_push(program.bubble_first, b);
 		} break;
 		case AWA_SUBMERGE: {
-			if (program.bubble_first) {
+			if (program.bubble_first && program.bubble_first->next) {
 				awa_bubble_t* sub = program.bubble_first;
 				int depth = current_awatism->u8;
-				program.bubble_first = program.bubble_first->next;
+				llist_stack_pop(program.bubble_first);
 
 				awa_bubble_t* last = program.bubble_first;
 				int i = 1;
-				for (awa_bubble_t* b = program.bubble_first->next; b && i != depth; b = b->next, i++) {
+				for (awa_bubble_t* b = last->next; b && i != depth; b = b->next, i++) {
 					last = b;
 				}
 				sub->next = last->next;
@@ -229,7 +250,26 @@ static void awa_program_run(awa_program_t program, bool print_debug) {
 			}
 		} break;
 		case AWA_POP: {
-			bubble_pop(&program);
+			if (program.bubble_first) {
+				awa_bubble_t* tmp = program.bubble_first;
+				llist_stack_pop(program.bubble_first);
+				if (tmp->first) {
+					while (tmp->first) {
+						if (tmp->first->next == NULL) {
+							llist_stack_push(program.bubble_first, tmp->first);
+							break;
+						}
+						for (awa_bubble_t* b = tmp->first; b; b = b->next) {
+							if (b->next->next == NULL) {
+								llist_stack_push(program.bubble_first, b->next);
+								b->next = NULL;
+								break;
+							}
+						}
+					}
+				}
+				free(tmp);
+			}
 		} break;
 		case AWA_DUPLICATE: {
 			if (program.bubble_first) {
@@ -239,14 +279,17 @@ static void awa_program_run(awa_program_t program, bool print_debug) {
 			}
 		} break;
 		case AWA_SURROUND: {
-			awa_bubble_t* b = calloc(sizeof(*b), 1);
-			for (int i = 0; i < current_awatism->u8; i++) {
-				awa_bubble_t* b_inside = program.bubble_first;
-				if (!b_inside) break;
-				llist_stack_pop(program.bubble_first);
-				llist_queue_push(b->first, b->last, b_inside);
+			if (program.bubble_first && current_awatism->u8) {
+				awa_bubble_t* b = calloc(sizeof(*b), 1);
+				for (int i = 0; i < current_awatism->u8; i++) {
+					awa_bubble_t* b_inside = program.bubble_first;
+					if (!b_inside) break;
+					llist_stack_pop(program.bubble_first);
+					b_inside->next = NULL;
+					llist_queue_push(b->first, b->last, b_inside);
+				}
+				llist_stack_push(program.bubble_first, b);
 			}
-			llist_stack_push(program.bubble_first, b);
 		} break;
 		case AWA_MERGE: {
 			awa_bubble_t* two[2];
@@ -294,7 +337,7 @@ static void awa_program_run(awa_program_t program, bool print_debug) {
 		case AWA_COUNT: {
 			if (program.bubble_first) {
 				int count = 0;
-				for (awa_bubble_t* b = program.bubble_first; b; b = b->next) {
+				for (awa_bubble_t* b = program.bubble_first->first; b; b = b->next) {
 					count++;
 				}
 				awa_bubble_t* b = calloc(sizeof(*b), 1);

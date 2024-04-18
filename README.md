@@ -1,5 +1,8 @@
 # AWA 5.0 interpreter in C (with debugging utils)
-currently tested on both hello world and the fibonacci script, hopefully it works.
+Implementation of AWA5.0:
+- https://github.com/TempTempai/AWA5.0
+
+currently tested on hello world, fibonacci script, binary->awatalk, and string->awatalk code. Hopefully it works.
 ### Compiling
 The program only needs libc as a dependency, it's a terminal program.
 
@@ -11,6 +14,7 @@ So just compile with for example:
 ```
 command line options:
 	'--quiet'               : disables printing inbetween operations
+	'--step'                : steps through the program [press enter]
 	
 	'--verbose-parser'     : prints opcodes and parameters of the awatalk
 	'--verbose-interpreter' : prints current instruction and stack while executing
