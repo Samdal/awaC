@@ -9,6 +9,7 @@ void print_help() {
     printf("\t'--verbose-parser'      : prints opcodes and parameters of the awatalk\n");
     printf("\t'--verbose-interpreter' : prints current instruction and stack while executing\n");
     printf("\t'--verbose'             : enables both of the above\n");
+    printf("\t'--allow-syscall'       : enables syscalls\n");
     printf("\t\n");
     printf("\t'--help'                : prints this message\n");
     printf("\t\n");

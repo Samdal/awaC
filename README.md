@@ -31,9 +31,10 @@ command line options:
 	'--quiet'               : disables printing inbetween operations
 	'--step'                : steps through the program [press enter]
 	
-	'--verbose-parser'     : prints opcodes and parameters of the awatalk
+	'--verbose-parser'      : prints opcodes and parameters of the awatalk
 	'--verbose-interpreter' : prints current instruction and stack while executing
 	'--verbose'             : enables both of the above
+	'--allow-syscall'       : enables syscalls
 	
 	'--help'                : prints this message
 	
