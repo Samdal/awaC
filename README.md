@@ -3,13 +3,28 @@ Implementation of AWA5.0:
 - https://github.com/TempTempai/AWA5.0
 
 currently tested on hello world, fibonacci script, binary->awatalk, and string->awatalk code. Hopefully it works.
-### Compiling
+### compiling
 The program only needs libc as a dependency, it's a terminal program.
 
 So just compile with for example:
 - unix: `cc main.c -o awaparser`
 - windows: `cl /Fe: awaparser.exe main.c`
 
+### additional opcodes:
+- syscall 'sys u10' (0x15)\
+'~wa awawa awawa **awa awa awa awa awa awa awa awawa**' (syscall 1, write)
+> The provided u10 is which syscall that will be used\
+> The instruction looks at the top most bubble, it must be a double bubble.\
+> The double bouble contains the arguments (arg1, arg2, arg3...arg6).\
+> The number of arguments depends on the syscall.\
+> A double bouble inside a double bouble is interpreted as a raw byte array\
+> And a pointer to that raw byte array is provided as the argument.\
+> Example: (arg1, (byte1, byte2, byte3, byte4), arg3)\
+> The double bubble used as the argument is NOT popped, as return values might be placed in byte arrays (NOT IMPLEMENTED)\
+> The return value of the syscall is placed at the top of the stack.
+- double pop 'p0p' (0x16)\
+'~wa awawa awa awa'
+> Same as pop except double boubles are deleted instead of being released into the bubble abyss
 ### usage
 ```
 command line options:
