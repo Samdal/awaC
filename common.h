@@ -10,7 +10,7 @@
 #include <errno.h>
 #include <assert.h>
 
-static char awascii_table[64] = "AWawJELYHOSIUMjelyhosiumPCNTpcntBDFGRbdfgr0123456789.!\()~_/;\n";
+static char awascii_table[64] = "AWawJELYHOSIUMjelyhosiumPCNTpcntBDFGRbdfgr0123456789 .,!'()~_/;\n";
 static uint8_t awascii_table_inverse[256] = {
     ['A'] = 0, ['W'] = 1, ['a'] = 2, ['w'] = 3,
     ['J'] = 4, ['E'] = 5, ['L'] = 6, ['Y'] = 7,
